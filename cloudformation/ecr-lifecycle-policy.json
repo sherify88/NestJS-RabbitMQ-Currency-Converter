@@ -1,0 +1,17 @@
+{
+    "rules": [
+      {
+        "rulePriority": 1,
+        "description": "Keep only the latest 2 images",
+        "selection": {
+          "tagStatus": "any",
+          "countType": "imageCountMoreThan",
+          "countNumber": 2
+        },
+        "action": {
+          "type": "expire"
+        }
+      }
+    ]
+  }
+  

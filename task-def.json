@@ -1,0 +1,101 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "convertify-container",
+      "image": ".dkr.ecr.eu-central-1.amazonaws.com/convertify:0ba2b0e",
+      "cpu": 0,
+      "links": [],
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "entryPoint": [],
+      "command": [],
+      "environment": [
+        {
+          "name": "PAYLOAD_SIZE_LIMIT",
+          "value": "2mb"
+        },
+        {
+          "name": "JWT_EXPIRATION_TIME",
+          "value": "604800"
+        },
+        {
+          "name": "APP_PORT",
+          "value": "8080"
+        },
+        {
+          "name": "CONVERSION_QUEUE_NAME",
+          "value": "conversionQueue"
+        }
+      ],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_JWT_SECRET-KCK5Ye"
+        },
+        {
+          "name": "CURRENCY_CONVERSION_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_API_KEY-fmUvIq"
+        },
+        {
+          "name": "DB_URI",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_DB_URI-2jmhsJ"
+        },
+        {
+          "name": "CURRENCY_CONVERSION_URI",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_CURRENCY_CONVERSION_URI-KKjLBj"
+        },
+        {
+          "name": "RABBITMQ_URL",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_RABBITMQ_URL-zeVCRq"
+        },
+        {
+          "name": "RABBITMQ_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_RABBITMQ_USERNAME-rrnMtQ"
+        },
+        {
+          "name": "RABBITMQ_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:eu-central-1::secret:CONVERTIFY_RABBITMQ_PASSWORD-sv3AOf"
+        }
+      ],
+      "dnsServers": [],
+      "dnsSearchDomains": [],
+      "extraHosts": [],
+      "dockerSecurityOptions": [],
+      "dockerLabels": {},
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/convertify",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "convertify"
+        },
+        "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ],
+  "family": "convertify-task",
+  "executionRoleArn": "arn:aws:iam:::role/convertify-stack-ECSExecutionRole-Rd7aALp0kLAk",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048"
+}

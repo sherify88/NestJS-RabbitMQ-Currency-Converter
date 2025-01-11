@@ -1,0 +1,263 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Main template for Convertify ECS Fargate Deployment"
+
+Parameters:
+  Subnet1Id:
+    Type: String
+    Description: "The first subnet ID for ECS tasks"
+  Subnet2Id:
+    Type: String
+    Description: "The second subnet ID for ECS tasks"
+  VPCId:
+    Type: String
+    Description: "The VPC ID for the ECS service"
+
+  ImageTag:
+    Type: String
+    Description: "The tag of the image to deploy, e.g., CI_COMMIT_SHA"
+
+Resources:
+  ConvertifyALB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: "my-apps-alb"
+      Scheme: "internet-facing"
+      Subnets:
+        - !Ref Subnet1Id
+        - !Ref Subnet2Id
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+      Type: "application"
+
+  # ECS Cluster
+  ECSCluster:
+    Type: "AWS::ECS::Cluster"
+    Properties:
+      ClusterName: "my-apps-cluster"
+
+  ConvertifyTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "convertify-tg" 
+      Protocol: "HTTP"
+      Port: 8080 
+      VpcId: !Ref VPCId 
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: "8080"
+      HealthCheckPath: "/docs" 
+      TargetType: "ip" 
+      Matcher:
+        HttpCode: "200-399"
+      HealthCheckIntervalSeconds: 30 
+      HealthCheckTimeoutSeconds: 5 
+      HealthyThresholdCount: 3 
+      UnhealthyThresholdCount: 3 
+      TargetGroupAttributes:
+        - Key: "deregistration_delay.timeout_seconds"
+          Value: "60"
+
+    # ALB Listener for HTTPS
+  ALBHttpListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: "forward"
+          TargetGroupArn: !Ref ConvertifyTargetGroup
+      LoadBalancerArn: !Ref ConvertifyALB
+      Port: 443
+      Protocol: "HTTPS"
+      SslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+      Certificates:
+        - CertificateArn: "" 
+
+  ALBListenerRule:
+    Type: "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties:
+      ListenerArn: !Ref ALBHttpListener
+      Conditions:
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values:
+              - "convertify.api.awesome-posts.com"
+      Priority: 1 
+      Actions:
+        - Type: "forward"
+          TargetGroupArn: !Ref ConvertifyTargetGroup
+
+  AlbSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow traffic to Convertify ECS service"
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0" 
+
+  # Task Definition with Secrets Manager integration
+  TaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      Family: "convertify-task"
+      Cpu: "1024"
+      Memory: "2048"
+      NetworkMode: "awsvpc"
+      RequiresCompatibilities: ["FARGATE"]
+      RuntimePlatform:
+        OperatingSystemFamily: "LINUX" 
+        CpuArchitecture: "X86_64"
+      ExecutionRoleArn: !GetAtt ECSExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: "convertify-container"
+          Image: 
+          portMappings:
+            - ContainerPort: 8080
+          Secrets: 
+            - Name: "JWT_SECRET"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_JWT_SECRET-KCK5Ye"
+            - Name: "CURRENCY_CONVERSION_API_KEY"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_API_KEY-fmUvIq"
+            - Name: "DB_URI"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_DB_URI-2jmhsJ"
+            - Name: "CURRENCY_CONVERSION_URI"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_CURRENCY_CONVERSION_URI-KKjLBj"
+            - Name: "RABBITMQ_URL"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_RABBITMQ_URL-zeVCRq"
+            - Name: "RABBITMQ_USERNAME"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_RABBITMQ_USERNAME-rrnMtQ"
+            - Name: "RABBITMQ_PASSWORD"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:CONVERTIFY_RABBITMQ_PASSWORD-sv3AOf"
+          Environment: # Non-sensitive environment variables
+            - Name: "APP_PORT"
+              Value: "8080"
+            - Name: "JWT_EXPIRATION_TIME"
+              Value: "604800"
+            - Name: "PAYLOAD_SIZE_LIMIT"
+              Value: "2mb"
+            - Name: "CONVERSION_QUEUE_NAME"
+              Value: "conversionQueue"
+
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              awslogs-group: "/ecs/convertify"
+              awslogs-region: "eu-central-1"
+              awslogs-stream-prefix: "convertify"
+
+  # ECS Service
+  ECSService:
+    Type: "AWS::ECS::Service"
+    Properties:
+      Cluster: !Ref ECSCluster
+      ServiceName: "convertify-service"
+      LaunchType: "FARGATE"
+      TaskDefinition: !Ref TaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: "ENABLED"
+          SecurityGroups:
+            - !Ref SecurityGroup
+          Subnets:
+            - !Ref Subnet1Id
+            - !Ref Subnet2Id
+      LoadBalancers:
+        - TargetGroupArn: !Ref ConvertifyTargetGroup 
+          ContainerName: "convertify-container" 
+
+  # Application Auto Scaling Target
+  ECSServiceScalingTarget:
+    Type: "AWS::ApplicationAutoScaling::ScalableTarget"
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Sub "service/${ECSCluster}/convertify-service"
+
+
+  # CPU Scaling Policy
+  ECSServiceCPUScalingPolicy:
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties:
+      PolicyName: "ECSServiceCPUScalingPolicy"
+      PolicyType: "TargetTrackingScaling"
+      ScalingTargetId: !Ref ECSServiceScalingTarget
+
+
+  # Memory Scaling Policy
+  ECSServiceMemoryScalingPolicy:
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties:
+      PolicyName: "ECSServiceMemoryScalingPolicy"
+      PolicyType: "TargetTrackingScaling"
+      ScalingTargetId: !Ref ECSServiceScalingTarget
+
+  # Security Group for ECS Service
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow traffic to Convertify ECS service"
+      VpcId: !Ref VPCId
+      SecurityGroupIngress: 
+        - IpProtocol: "tcp"
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: "0.0.0.0/0" 
+
+  # CloudWatch Log Group
+  CloudWatchLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: "/ecs/convertify"
+      RetentionInDays: 14
+
+  # IAM Role for ECS Task Execution
+  ECSExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ecs-tasks.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "ECSExecutionRolePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # ECR Permissions
+              - Effect: "Allow"
+                Action:
+                Resource:
+
+              # CloudWatch Logs Permissions
+              - Effect: "Allow"
+                Action:
+                Resource:
+
+              # Secrets Manager Permissions
+              - Effect: "Allow"
+                Action:
+                Resource:
+
+
+  # IAM Role for Application Auto Scaling
+  ApplicationAutoScalingRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "application-autoscaling.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "ECSAutoScalingPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                Resource:

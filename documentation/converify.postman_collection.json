@@ -1,0 +1,191 @@
+{
+	"info": {
+		"_postman_id": "26d742f0-38fb-4cdb-9917-dcda896dc974",
+		"name": "Users",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16503125",
+		"_collection_link": "https://red-meteor-960706.postman.co/workspace/Currency-Conversion~8c55d10c-4970-45dd-99cb-4d15185957b6/collection/16503125-26d742f0-38fb-4cdb-9917-dcda896dc974?action=share&source=collection_link&creator=16503125"
+	},
+	"item": [
+		{
+			"name": "user register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"username\":\"hassawn\",\"password\":\"123456\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{app_url}}/user/register",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"user",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"username\":\"hassan\",\"password\":\"123456\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{app_url}}/auth/login",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "convert",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzE1NmFlMWQzZmMxMjBkNDExZjhiYSIsImlhdCI6MTczNTUwOTkwNCwiZXhwIjoxNzM2MTE0NzA0fQ.zzJNkpIJr8Pn_YgKrMAsHkPtsf4inOvmgd7M4dZdtoU",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sourceCurrency\":\"EGP\",\"targetCurrency\":\"USD\",\"amount\":14000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{app_url}}/conversions/convert",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"conversions",
+						"convert"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getUserHistory",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzE1NmFlMWQzZmMxMjBkNDExZjhiYSIsImlhdCI6MTczNTQ4MTAxMywiZXhwIjoxNzM2MDg1ODEzfQ.6yuefEfUQ2Pa_pLQ0qrr7hv-3bK9jWMCTWvrSQ7nX2w",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{app_url}}/user/history?page=1&limit=50",
+					"host": [
+						"{{app_url}}"
+					],
+					"path": [
+						"user",
+						"history"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "app_url",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "localhost",
+			"value": "http://localhost:4100",
+			"type": "string"
+		},
+		{
+			"key": "produrl",
+			"value": "https://convertify.api.awesome-posts.com",
+			"type": "string"
+		}
+	]
+}
