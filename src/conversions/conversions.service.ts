@@ -1,60 +1,33 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { RabbitMQService } from 'src/queue-service/rabbitmq-service.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { CreateConversionDto } from './dto/create-conversion.dto';
+import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ConversionsService {
-  private readonly conversionQueueName: string;
-  private readonly logger = new Logger(ConversionsService.name);
+  constructor(@Inject('RABBITMQ_SERVICE') private readonly rabbitClient: ClientProxy) {}
 
-  constructor(
-    private readonly rabbitMQService: RabbitMQService,
-        private readonly configService: ConfigService,
-    
-  ) {
-    this.conversionQueueName = this.configService.get<string>('CONVERSION_QUEUE_NAME');
-  }
-
-
-async requestConversion(dto: CreateConversionDto): Promise<any> {
-  const correlationId = uuidv4();
-  const requestId = uuidv4();
-  dto.requestId = requestId;
-
-  const replyQueue = await this.rabbitMQService.createReplyQueue();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      this.rabbitMQService.unregisterReplyHandler(correlationId); // Cleanup handler
-      reject(new Error('Timeout waiting for response'));
-    }, 8000); // Set the timeout duration
-
-    this.rabbitMQService.registerReplyHandler(correlationId, (message: any) => {
-      clearTimeout(timeout);
-
-      if(message.data.success){
-        resolve(message.data);
-      }
-        reject(new BadRequestException(message.data.message));
+  async requestConversion(dto: CreateConversionDto): Promise<any> {
+    try {
+      const requestId = uuidv4();
+      dto.requestId = requestId;
+      console.log(`🚀 Sending conversion request:`, dto);
       
-    });
-
-    this.rabbitMQService.publishWithReply(
-      this.conversionQueueName,
-      dto,
-      replyQueue,
-      correlationId,
-    ).catch((error) => {
-      clearTimeout(timeout);
-      console.error(`Error publishing message: ${error.message}`);
-      reject(error);
-    });
-
-    console.log(`Request sent with correlationId: ${correlationId}`);
-  });
-}
-
+      if (!this.rabbitClient) {
+        throw new Error('RabbitMQ ClientProxy is not initialized!');
+      }
+  
+      const result = await firstValueFrom(
+        this.rabbitClient.send('conversion_request', dto) // Automatically handles request-response
+      );
+  
+      console.log(`✅ Received Response:`, result);
+      return result;
+    } catch (error) {
+      console.error(`❌ RabbitMQ Error:`, error.message);
+      throw new Error('Failed to send message to RabbitMQ.');
+    }
+  }
   
 }

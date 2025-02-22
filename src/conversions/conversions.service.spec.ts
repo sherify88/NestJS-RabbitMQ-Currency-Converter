@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConversionsService } from './conversions.service';
-import { RabbitMQService } from 'src/queue-service/rabbitmq-service.service';
 import { ConfigService } from '@nestjs/config';
+import { ClientProxy } from '@nestjs/microservices';
 import { CreateConversionDto } from './dto/create-conversion.dto';
-import { BadRequestException } from '@nestjs/common';
+import { firstValueFrom, of } from 'rxjs';
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mocked-correlation-id'),
@@ -11,24 +11,17 @@ jest.mock('uuid', () => ({
 
 describe('ConversionsService', () => {
   let service: ConversionsService;
-  let rabbitMQService: Partial<Record<keyof RabbitMQService, jest.Mock>>;
+  let rabbitClient: Partial<jest.Mocked<ClientProxy>>;
 
   beforeEach(async () => {
-    rabbitMQService = {
-      createReplyQueue: jest.fn().mockResolvedValue('mockReplyQueue'),
-      registerReplyHandler: jest.fn((correlationId, callback) => {
-        setTimeout(() => {
-          callback({ data: { success: true, convertedAmount: 85 } }); 
-        }, 100); 
-      }),
-      unregisterReplyHandler: jest.fn(),
-      publishWithReply: jest.fn().mockResolvedValue(undefined), 
+    rabbitClient = {
+      send: jest.fn().mockReturnValue(of({ success: true, convertedAmount: 85 })),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversionsService,
-        { provide: RabbitMQService, useValue: rabbitMQService },
+        { provide: 'RABBITMQ_SERVICE', useValue: rabbitClient },
         { provide: ConfigService, useValue: { get: jest.fn(() => 'mockConversionQueue') } },
       ],
     }).compile();
@@ -36,7 +29,7 @@ describe('ConversionsService', () => {
     service = module.get<ConversionsService>(ConversionsService);
   });
 
-  it('should handle conversion request and return the result', async () => {
+  it('should handle conversion request and return the result', async () => { 
     const mockDto: CreateConversionDto = {
       sourceCurrency: 'USD',
       targetCurrency: 'EUR',
@@ -46,7 +39,6 @@ describe('ConversionsService', () => {
     };
 
     const result = await service.requestConversion(mockDto);
-    
 
     // Assertions
     expect(result).toEqual({
@@ -54,22 +46,12 @@ describe('ConversionsService', () => {
       convertedAmount: 85,
     });
 
-    expect(rabbitMQService.createReplyQueue).toHaveBeenCalled();
-    expect(rabbitMQService.registerReplyHandler).toHaveBeenCalledWith(
-      'mocked-correlation-id',
-      expect.any(Function),
-    );
-    expect(rabbitMQService.publishWithReply).toHaveBeenCalledWith(
-      'mockConversionQueue',
-      expect.objectContaining({
-        sourceCurrency: 'USD',
-        targetCurrency: 'EUR',
-        amount: 100,
-        userId: 'user123',
-        requestId: expect.any(String),
-      }),
-      'mockReplyQueue',
-      'mocked-correlation-id',
-    );
+    expect(rabbitClient.send).toHaveBeenCalledWith('conversion_request', expect.objectContaining({
+      sourceCurrency: 'USD',
+      targetCurrency: 'EUR',
+      amount: 100,
+      userId: 'user123',
+      requestId: expect.any(String),
+    }));
   });
 });

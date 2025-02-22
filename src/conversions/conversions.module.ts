@@ -5,24 +5,41 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConvTransactionSchema } from './entities/conversion.entity';
 import { HttpModule } from '@nestjs/axios';
 import { UsersModule } from 'src/users/users.module';
-import { QueueModule } from 'src/queue-service/queue.module';
 import { ConversionProcessorService } from './conversion-process.service';
 import { ConversionConsumerService } from './conversion-consumer.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'ConvTransaction', schema: ConvTransactionSchema }]),
-    HttpModule, UsersModule, QueueModule
+    HttpModule,
+    UsersModule,
+    ClientsModule.registerAsync([
+      {
+        name: 'RABBITMQ_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [configService.get<string>('RABBITMQ_URL')],
+            queue: configService.get<string>('CONVERSION_QUEUE_NAME'),
+            queueOptions: {
+              durable: true,
+            },
+          },
+        }),
+      },
+    ]),
   ],
-  controllers: [ConversionsController],
+  controllers: [ConversionsController, ConversionConsumerService], // Consumer is now a controller
   providers: [
     ConversionsService,
     ConversionProcessorService,
-    ConversionConsumerService, 
   ],
   exports: [
     ConversionProcessorService,
-    ConversionConsumerService, 
   ],
 })
-export class ConversionsModule { }
+export class ConversionsModule {}

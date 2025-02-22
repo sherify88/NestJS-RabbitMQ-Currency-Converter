@@ -14,9 +14,16 @@ export default class JwtAuthGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
+
     if (isPublic) {
-      return true;
+      return true; // ✅ Allow public routes
     }
-    return super.canActivate(context);
+
+    const type = context.getType();
+    if (type === 'rpc') {
+      return true; // ✅ Skip JWT for RabbitMQ requests
+    }
+
+    return super.canActivate(context); // ✅ Apply JWT for HTTP requests
   }
 }

@@ -11,35 +11,32 @@ import JwtAuthGuard from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { DatabaseModule } from './database.module';
 import { ConversionsModule } from './conversions/conversions.module';
-import { QueueModule } from './queue-service/queue.module';
 
 @Module({
-	imports: [
-		ConfigModule.forRoot({
-			isGlobal: true,
-		}),
-		DatabaseModule,
-		ScheduleModule.forRoot(),
-		MulterModule.register({
-			dest: './public'
-		}),
-		AuthModule,
-		UsersModule,
-		ConversionsModule,
-		QueueModule
-	],
-	controllers: [AppController],
-	providers: [AppService,
-		{
-			provide: APP_GUARD,
-			useClass: JwtAuthGuard
-		},
-		{
-			provide: APP_GUARD,
-			useClass: RolesGuard
-		},
-
-
-	],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    DatabaseModule,
+    ScheduleModule.forRoot(),
+    MulterModule.register({
+      dest: './public',
+    }),
+    AuthModule,
+    UsersModule,
+    ConversionsModule,
+  ],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule {}

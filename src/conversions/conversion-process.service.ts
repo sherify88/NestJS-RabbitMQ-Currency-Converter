@@ -27,13 +27,13 @@ export class ConversionProcessorService {
    */
   async processConversion(dto: ICreateTransaction): Promise<any> {
     try {
-      this.logger.log(`Processing conversion for requestId: ${dto.requestId}`);
+      console.log(`Processing conversion for requestId: ${dto.requestId}`);
 
       // Step 1: Check for existing transaction
       const existingTransaction = await this.convTransactionsModel.findOne({ requestId: dto.requestId });
       if (existingTransaction) {
-        this.logger.warn(`Duplicate request detected for requestId: ${dto.requestId}`);
-        return { success: false, message: 'Duplicate request detected', transaction: existingTransaction };
+        console.log(`Duplicate request detected for requestId11: ${dto.requestId}`);
+        return { success: false, message: 'Duplicate request detected11', transaction: existingTransaction };
       }
 
       // Step 2: Fetch conversion rate

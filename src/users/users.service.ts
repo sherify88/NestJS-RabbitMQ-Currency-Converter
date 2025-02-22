@@ -73,9 +73,9 @@ export class UsersService {
 
 
   async findByUsername(username: string): Promise<User> {
-    return this.userModel.findOne({
+    return await this.userModel.findOne({
       username,
-    }).exec();
+    });
   }
     
 

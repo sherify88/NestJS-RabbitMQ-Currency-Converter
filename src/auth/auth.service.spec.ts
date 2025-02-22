@@ -24,7 +24,8 @@ describe('AuthService', () => {
   let jwtService: JwtService;
 
   beforeEach(async () => {
-    const mockUsersService = {
+
+    const mockUsersService: Partial<UsersService> = {
       findByUsername: jest.fn(),
     };
 
@@ -44,7 +45,7 @@ describe('AuthService', () => {
           useValue: {}, // Mock ConfigService if necessary
         },
         {
-          provide: UsersService,
+          provide: UsersService, 
           useValue: mockUsersService,
         },
       ],
