@@ -19,7 +19,7 @@ export class ConversionsService {
       }
   
       const result = await firstValueFrom(
-        this.rabbitClient.send('conversion_request', dto) // Automatically handles request-response
+        this.rabbitClient.send('conversion_request', dto) 
       );
   
       console.log(`✅ Received Response:`, result);

@@ -33,7 +33,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
     ]),
   ],
-  controllers: [ConversionsController, ConversionConsumerService], // Consumer is now a controller
+  controllers: [ConversionsController, ConversionConsumerService], 
   providers: [
     ConversionsService,
     ConversionProcessorService,
