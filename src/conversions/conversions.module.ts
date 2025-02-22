@@ -8,7 +8,9 @@ import { UsersModule } from 'src/users/users.module';
 import { ConversionProcessorService } from './conversion-process.service';
 import { ConversionConsumerService } from './conversion-consumer.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { createRabbitMQClient } from 'src/utils/rabbitmq-client.factory';
+
+
 
 @Module({
   imports: [
@@ -18,18 +20,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ClientsModule.registerAsync([
       {
         name: 'RABBITMQ_SERVICE',
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService) => ({
-          transport: Transport.RMQ,
-          options: {
-            urls: [configService.get<string>('RABBITMQ_URL')],
-            queue: configService.get<string>('CONVERSION_QUEUE_NAME'),
-            queueOptions: {
-              durable: true,
-            },
-          },
-        }),
+        ...createRabbitMQClient('CONVERSION_QUEUE_NAME'),
+      },
+      {
+        name: 'EMAIL_SERVICE',
+        ...createRabbitMQClient('email_queue'),
       },
     ]),
   ],

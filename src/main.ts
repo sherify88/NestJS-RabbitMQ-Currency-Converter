@@ -61,7 +61,7 @@ async function bootstrap() {
 		const config = new DocumentBuilder()
 			.setTitle('Convertify App')
 			.setDescription('Convertify REST API specification')
-			.setVersion('1.5.1')
+			.setVersion('1.5.2')
 			.addBasicAuth()
 			.addBearerAuth()
 			.build();
