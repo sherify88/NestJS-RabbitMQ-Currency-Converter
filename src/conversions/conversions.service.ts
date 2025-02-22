@@ -25,7 +25,7 @@ export class ConversionsService {
       console.log(`✅ Received Response:`, result);
       return result;
     } catch (error) {
-      console.error(`❌ RabbitMQ Error:`, error.message);
+      console.error(`❌ RabbitMQ Error:`, error);
       throw new Error('Failed to send message to RabbitMQ.');
     }
   }
